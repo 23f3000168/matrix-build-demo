@@ -1,0 +1,76 @@
+name: Matrix Build with Artifacts
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  matrix-build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: [16, 18, 20]
+        
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      
+      - name: matrix-df130a3
+        run: echo "Building on ${{ matrix.os }} with Node.js ${{ matrix.node-version }}"
+      
+      - name: Generate build information
+        shell: bash
+        run: |
+          mkdir -p build-output
+          cat > build-output/build-info.json << EOF
+          {
+            "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "os": "${{ matrix.os }}",
+            "node_version": "${{ matrix.node-version }}",
+            "build_id": "${{ github.run_id }}-${{ github.run_number }}",
+            "commit": "${{ github.sha }}",
+            "branch": "${{ github.ref_name }}",
+            "runner_os": "${{ runner.os }}",
+            "runner_arch": "${{ runner.arch }}"
+          }
+          EOF
+      
+      - name: Create additional build artifacts
+        shell: bash
+        run: |
+          echo "Build completed successfully on ${{ matrix.os }}" > build-output/status.txt
+          echo "Node version: ${{ matrix.node-version }}" >> build-output/status.txt
+          echo "Build timestamp: $(date)" >> build-output/status.txt
+          echo "Commit SHA: ${{ github.sha }}" >> build-output/status.txt
+          
+          # Create a sample application output
+          cat > build-output/app.js << 'EOF'
+          console.log('Sample application built on ${{ matrix.os }} with Node ${{ matrix.node-version }}');
+          console.log('Build ID: ${{ github.run_id }}');
+          EOF
+      
+      - name: Display build info
+        shell: bash
+        run: |
+          echo "=== Build Information ==="
+          cat build-output/build-info.json
+          echo ""
+          echo "=== Build Status ==="
+          cat build-output/status.txt
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-df130a3-${{ matrix.os }}-node${{ matrix.node-version }}
+          path: build-output/
+          retention-days: 30
